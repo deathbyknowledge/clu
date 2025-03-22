@@ -67,7 +67,6 @@ usage: [cmd] [product] [options]\n`;
   }
 
   async processCmd(socket: WebSocket, cmd: string) {
-    console.log("Processing command: ", cmd);
     try {
       const result = await this.env.AI.run(
         "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
@@ -100,14 +99,12 @@ usage: [cmd] [product] [options]\n`;
         return;
       }
 
-      console.log("Found: ", response);
 
       if (response === "<help/>") {
         socket.send(JSON.stringify({ type: "cli", data: this.HELP_MESSAGE }));
         return;
       }
       const data = await this.callEndpoint(response);
-      console.log("Got data: ", data);
       socket.send(JSON.stringify({ type: "cli", data: data }));
     } catch (error) {
       console.error("AI.run ERROR:", error);
@@ -129,7 +126,8 @@ usage: [cmd] [product] [options]\n`;
         {
           method: "GET",
           headers: {
-            Authorization: this.state.API_TOKEN,
+            Authorization: `Bearer ${this.state.API_TOKEN}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -163,10 +161,8 @@ export default {
       if (!cookie) return new Response("missing auth", { status: 400 });
 
       let token = cookie.split("=")[1];
-      console.log(token)
       if (token.endsWith(";")) token = token.slice(0, -1);
 
-      console.log(token)
       const response = await fetch(
         `https://api.cloudflare.com/client/v4/user`,
         {
@@ -178,7 +174,6 @@ export default {
         }
       );
       const data: any = await response.json();
-      console.log(data);
       if ("error" in data) console.log(data.error);
       const cfUserId = data?.result?.id;
       if (!cfUserId) return new Response("ur creds dont work", { status: 403 });

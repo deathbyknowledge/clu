@@ -3,36 +3,22 @@ import React, {
   PropsWithChildren,
   useContext,
   useEffect,
-  useState,
 } from "react";
 
-type AuthContext = {
-  CF_API_TOKEN: string;
-};
+type AuthContext = {};
 
-const AuthContext = createContext<AuthContext>({
-  CF_API_TOKEN: "",
-});
+const AuthContext = createContext<AuthContext>({});
 
 export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
-  const [token, setToken] = useState("");
-
   useEffect(() => {
     const token = localStorage.getItem("auth");
     document.cookie = "X-Auth=" + token + "; path=/";
     console.log(token);
-    if (token) setToken(token);
   }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{ CF_API_TOKEN: token }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{}}>{children}</AuthContext.Provider>;
 };
 
 export const useAppContext = () => {

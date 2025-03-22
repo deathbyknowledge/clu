@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, PropsWithChildren } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./Terminal.css";
 import { useAppContext } from "../context/AppContext";
 import LoadingBorderWrapper from "./LoadingBorderWrapper";
@@ -22,7 +22,7 @@ Welcome to
     `;
 
 const Terminal: React.FC = () => {
-  const { agent, agentState, loading, messages, setMessages, setLoading } =
+  const { agent, loading, messages, setMessages, setLoading } =
     useAppContext();
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
