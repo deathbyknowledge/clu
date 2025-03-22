@@ -1,0 +1,45 @@
+#terminal {
+  padding: 10px;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  border-radius: 2px;
+  font-size: 14px;
+  position: relative;
+  color: var(--color175);
+  overflow: auto;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.message {
+  width: 100%;
+  font-size: 16px;
+  white-space: pre-wrap;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+#input-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  justify-content: flex-start;
+}
+
+#input-container input {
+  width: 100%;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  color: var(--color175);
+  font-weight: 600;
+  caret-color: var(--color175);
+  font-family: monospace;
+  font-size: 16px;
+  padding: 0;
+  z-index: 3;
+} 
