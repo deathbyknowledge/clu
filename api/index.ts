@@ -22,7 +22,7 @@ interface AiTextGenerationResult {
 }
 
 export class Clu extends Agent<Env, State> {
-  HELP_MESSAGE = `\`clu\` let's you nagivate the complexity of the Cloudflare API easily.
+  HELP_MESSAGE = `CLU let's you nagivate the complexity of the Cloudflare API easily.
 Use it as you would use a native CLI client, try what's intuitive. It's pretty smart.
 Vibe Clouding.
 
@@ -141,7 +141,7 @@ usage: [cmd] [product] [options]\n`;
         messages?: unknown;
       };
       if (!success) {
-        console.log('Failed calling endpoint. Tried to call', endpoint); 
+        console.log("Failed calling endpoint. Tried to call", endpoint);
         return { errors, messages };
       }
       return result;
@@ -159,6 +159,30 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/api/")) {
+      // Verify endpoint for client checks on tokens.
+      if (url.pathname === "/api/verify") {
+        const token = request.headers.get("X-Auth");
+        if (!token) return new Response("missing token", { status: 400 });
+        const response = await fetch(
+          `https://api.cloudflare.com/client/v4/user/tokens/verify`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const data: any = await response.json();
+        if (data?.result?.status === "active") {
+          return new Response(null, { status: 200 });
+        } else {
+          return new Response(null, { status: 401 });
+        }
+      }
+
+      // Authenticate request before connecting to agent.
       const cookie = request.headers
         .get("cookie")
         ?.split(" ")
