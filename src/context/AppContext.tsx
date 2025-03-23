@@ -25,9 +25,10 @@ const AppContext = createContext<AppContext>({
 });
 
 type AgentState = {
-  history: Message[];
+  history: string[];
   env: Map<string, string>;
   HELP_MESSAGE: string,
+  status: 'ready' | 'thinking' | 'fetching'
 };
 
 interface Message {
@@ -50,7 +51,6 @@ export const ContextProvider: React.FC<PropsWithChildren> = ({ children }) => {
     onStateUpdate: _setAgentState,
     onMessage: (message) => {
       try {
-        console.log("RECEIVED", message);
         const { type, data } = JSON.parse(message.data);
         if (type === "cli") {
           setMessages((prev) => [

@@ -11,13 +11,11 @@ import cfRadar from "./prompts/cf-radar";
 import cfMisc from "./prompts/cf-misc";
 
 type State = {
-  history: {
-    role: "user" | "assistant";
-    content: string;
-  }[];
+  history: string[];
   env: Map<string, string>;
   API_TOKEN: string;
   HELP_MESSAGE: string;
+  status: "ready" | "thinking" | "fetching";
 };
 
 // Define types for AI response
@@ -25,7 +23,7 @@ interface AiTextGenerationResult {
   response: string;
 }
 
-const HELP_MESSAGE = `CLU helps you nagivate the complexity of the Cloudflare.
+const HELP_MESSAGE = `CLU helps you nagivate the complexity of the Cloudflare API.
 Use it as you would use a native CLI client, try whatever feels intuitive. It's pretty smart.
 
 Usage: [scope] [command] <options>
@@ -37,11 +35,11 @@ Scopes:
 \tzones - Zone level endpoints
 \t\t(example: zones ls rulesets --zoneId 1234)
 
-\tmisc (default) - All other endpoints.
-\t\t(example: get user)
-
 \tradar - Radar level endpoints.
 \t\t(example: idk i don't use radar)
+
+\tmisc (default) - All other endpoints.
+\t\t(example: get user)
 \n`;
 
 export class Clu extends Agent<Env, State> {
@@ -55,7 +53,13 @@ export class Clu extends Agent<Env, State> {
       connection.close(1, "missing creds, how did they let you in?");
       return;
     }
-    this.setState({ ...this.state, HELP_MESSAGE, API_TOKEN: token });
+    this.setState({
+      ...this.state,
+      HELP_MESSAGE,
+      API_TOKEN: token,
+      history: this.state.history ?? [],
+      status: "ready",
+    });
   }
 
   onRequest(_request: Request): Response | Promise<Response> {
@@ -109,8 +113,11 @@ export class Clu extends Agent<Env, State> {
   async processCmd(socket: WebSocket, cmd: string) {
     try {
       console.log("calling", cmd);
+      let newHistory = [...this.state.history];
+      const overflows = newHistory.push(cmd) > 50;
+      if (overflows) newHistory.shift();
+      this.setState({ ...this.state, history: newHistory, status: "thinking" });
       const sysprompt = this.getCLIPrompt(cmd);
-      console.log(sysprompt);
       const result = await this.env.AI.run(
         "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
         {
@@ -136,6 +143,7 @@ export class Clu extends Agent<Env, State> {
           socket.send(JSON.stringify({ type: "cli", data: HELP_MESSAGE }));
           return;
         }
+        this.setState({ ...this.state, status: "fetching" });
         const data = await this.callEndpoint(response);
         socket.send(JSON.stringify({ type: "cli", data: data }));
       } else {
@@ -157,6 +165,8 @@ export class Clu extends Agent<Env, State> {
           }`,
         })
       );
+    } finally {
+      this.setState({ ...this.state, status: "ready" });
     }
   }
 

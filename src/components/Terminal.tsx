@@ -37,11 +37,11 @@ Once you have one, set it by running \`token set <TOKEN>\`.
 const Terminal: React.FC = () => {
   const { agent, loading, messages, setMessages, setLoading, agentState } =
     useAppContext();
-    console.log(agentState);
   const { CF_TOKEN, setToken } = useAuthContext();
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const [historyIdx, setHistoryIdx] = useState(0);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -89,7 +89,6 @@ const Terminal: React.FC = () => {
     setMessages((prev: any) => [...prev, { role: "user", content: userInput }]);
 
     if (cmd === "help") {
-      console.log(agentState?.HELP_MESSAGE);
       setMessages((prev: any) => [
         ...prev,
         { role: "assistant", content: agentState?.HELP_MESSAGE },
@@ -153,7 +152,17 @@ const Terminal: React.FC = () => {
   const handleInputKeyPress = (
     event: React.KeyboardEvent<HTMLInputElement>
   ) => {
-    if (event.key === "Enter" && input.trim() !== "") {
+    if (event.key === "ArrowUp") {
+      if (agentState && agentState.history.length > historyIdx){
+        setInput(agentState.history.reverse()[historyIdx]);
+        setHistoryIdx(historyIdx + 1);
+      }
+    } else if (event.key === "ArrowDown") {
+      if (agentState && agentState.history && historyIdx > 0){
+        setInput(agentState.history.reverse()[historyIdx]);
+        setHistoryIdx(historyIdx - 1);
+      }
+    } else if (event.key === "Enter" && input.trim() !== "") {
       processInput(input);
       setInput("");
     }
@@ -180,8 +189,8 @@ const Terminal: React.FC = () => {
               </span>
             ))}
           </div>
-          {(messages.length === 0 ||
-            messages[messages.length - 1]?.role !== "user") && (
+          {messages.length === 0 ||
+          messages[messages.length - 1]?.role !== "user" ? (
             <div id="input-container">
               <span>
                 {CF_TOKEN && CF_TOKEN !== "" ? Prompt.Clu : Prompt.Host}&nbsp;
@@ -196,6 +205,15 @@ const Terminal: React.FC = () => {
                 autoFocus
               />
             </div>
+          ) : (
+            <>
+              {agentState?.status === "thinking" && (
+                <span>Exploring parameter hyperspace...</span>
+              )}
+              {agentState?.status === "fetching" && (
+                <span>Downloading configuration grid...</span>
+              )}
+            </>
           )}
         </div>
       )}
