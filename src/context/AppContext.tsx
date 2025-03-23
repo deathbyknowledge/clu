@@ -27,6 +27,7 @@ const AppContext = createContext<AppContext>({
 type AgentState = {
   history: Message[];
   env: Map<string, string>;
+  HELP_MESSAGE: string,
 };
 
 interface Message {

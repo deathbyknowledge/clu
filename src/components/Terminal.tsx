@@ -20,6 +20,7 @@ Welcome to
  ##::: ##: ##:::::::: ##:::: ##:
 . ######:: ########::. #######::
 :......:::........:::.......::::
+
 `;
 
 enum Prompt {
@@ -34,7 +35,9 @@ Once you have one, set it by running \`token set <TOKEN>\`.
 `;
 
 const Terminal: React.FC = () => {
-  const { agent, loading, messages, setMessages, setLoading } = useAppContext();
+  const { agent, loading, messages, setMessages, setLoading, agentState } =
+    useAppContext();
+    console.log(agentState);
   const { CF_TOKEN, setToken } = useAuthContext();
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -82,9 +85,17 @@ const Terminal: React.FC = () => {
       setMessages([]);
       return;
     }
-
     // Add user message to the list
     setMessages((prev: any) => [...prev, { role: "user", content: userInput }]);
+
+    if (cmd === "help") {
+      console.log(agentState?.HELP_MESSAGE);
+      setMessages((prev: any) => [
+        ...prev,
+        { role: "assistant", content: agentState?.HELP_MESSAGE },
+      ]);
+      return;
+    }
 
     if (cmd === "token create") {
       setMessages((prev: any[]) => [

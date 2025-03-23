@@ -5,7 +5,10 @@ import {
   getAgentByName,
   WSMessage,
 } from "agents";
-import cliPrompt from "./prompts/cli";
+import cfAccounts from "./prompts/cf-accounts";
+import cfZones from "./prompts/cf-zones";
+import cfRadar from "./prompts/cf-radar";
+import cfMisc from "./prompts/cf-misc";
 
 type State = {
   history: {
@@ -14,6 +17,7 @@ type State = {
   }[];
   env: Map<string, string>;
   API_TOKEN: string;
+  HELP_MESSAGE: string;
 };
 
 // Define types for AI response
@@ -21,13 +25,26 @@ interface AiTextGenerationResult {
   response: string;
 }
 
+const HELP_MESSAGE = `CLU helps you nagivate the complexity of the Cloudflare.
+Use it as you would use a native CLI client, try whatever feels intuitive. It's pretty smart.
+
+Usage: [scope] [command] <options>
+
+Scopes:
+\taccounts - Account level endpoints.
+\t\t(example: account ls vectorize indexes --accountId 1234)
+
+\tzones - Zone level endpoints
+\t\t(example: zones ls rulesets --zoneId 1234)
+
+\tmisc (default) - All other endpoints.
+\t\t(example: get user)
+
+\tradar - Radar level endpoints.
+\t\t(example: idk i don't use radar)
+\n`;
+
 export class Clu extends Agent<Env, State> {
-  HELP_MESSAGE = `CLU let's you nagivate the complexity of the Cloudflare API easily.
-Use it as you would use a native CLI client, try what's intuitive. It's pretty smart.
-Vibe Clouding.
-
-usage: [cmd] [product] [options]\n`;
-
   onConnect(
     connection: Connection,
     ctx: ConnectionContext
@@ -38,7 +55,7 @@ usage: [cmd] [product] [options]\n`;
       connection.close(1, "missing creds, how did they let you in?");
       return;
     }
-    this.setState({ ...this.state, API_TOKEN: token });
+    this.setState({ ...this.state, HELP_MESSAGE, API_TOKEN: token });
   }
 
   onRequest(_request: Request): Response | Promise<Response> {
@@ -69,14 +86,36 @@ usage: [cmd] [product] [options]\n`;
     this.ctx.abort("killing...");
   }
 
+  getCLIPrompt(cmd: string): string {
+    const first = cmd.split(" ")[0];
+    console.log("first", first);
+    let prompt = cfMisc;
+    switch (first) {
+      case "zones":
+      case "zone":
+        prompt = cfZones;
+        break;
+      case "accounts":
+      case "account":
+        prompt = cfAccounts;
+        break;
+      case "radar":
+        prompt = cfRadar;
+        break;
+    }
+    return prompt;
+  }
+
   async processCmd(socket: WebSocket, cmd: string) {
     try {
       console.log("calling", cmd);
+      const sysprompt = this.getCLIPrompt(cmd);
+      console.log(sysprompt);
       const result = await this.env.AI.run(
         "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
         {
           messages: [
-            { role: "system", content: cliPrompt },
+            { role: "system", content: sysprompt },
             { role: "user", content: cmd },
           ],
         },
@@ -94,7 +133,7 @@ usage: [cmd] [product] [options]\n`;
       if (result && "response" in result) {
         response = (result as AiTextGenerationResult).response;
         if (response === "<help/>") {
-          socket.send(JSON.stringify({ type: "cli", data: this.HELP_MESSAGE }));
+          socket.send(JSON.stringify({ type: "cli", data: HELP_MESSAGE }));
           return;
         }
         const data = await this.callEndpoint(response);
