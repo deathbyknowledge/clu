@@ -28,20 +28,13 @@ Vibe Clouding.
 
 usage: [cmd] [product] [options]\n`;
 
-  onStart(): void | Promise<void> {
-    this.setState({
-      history: [],
-      env: new Map(),
-      API_TOKEN: "",
-    });
-  }
-
   onConnect(
     connection: Connection,
     ctx: ConnectionContext
   ): void | Promise<void> {
     const token = ctx.request.headers.get("X-Auth");
     if (!token) {
+      console.log("[ERROR] Connection without proper token set");
       connection.close(1, "missing creds, how did they let you in?");
       return;
     }
@@ -59,6 +52,8 @@ usage: [cmd] [product] [options]\n`;
         switch (type) {
           case "cli":
             this.processCmd(connection, data);
+            break;
+          case "kill":
         }
       }
     } catch (error) {
@@ -66,8 +61,17 @@ usage: [cmd] [product] [options]\n`;
     }
   }
 
+  shutdown() {
+    for (let conn of this.getConnections()) {
+      conn.close();
+    }
+    this.ctx.storage.deleteAll();
+    this.ctx.abort("killing...");
+  }
+
   async processCmd(socket: WebSocket, cmd: string) {
     try {
+      console.log("calling", cmd);
       const result = await this.env.AI.run(
         "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
         {
@@ -85,10 +89,16 @@ usage: [cmd] [product] [options]\n`;
         }
       );
 
-      // Handle different possible return types from AI
       let response: string;
+      console.log("result", result);
       if (result && "response" in result) {
         response = (result as AiTextGenerationResult).response;
+        if (response === "<help/>") {
+          socket.send(JSON.stringify({ type: "cli", data: this.HELP_MESSAGE }));
+          return;
+        }
+        const data = await this.callEndpoint(response);
+        socket.send(JSON.stringify({ type: "cli", data: data }));
       } else {
         socket.send(
           JSON.stringify({
@@ -98,14 +108,6 @@ usage: [cmd] [product] [options]\n`;
         );
         return;
       }
-
-
-      if (response === "<help/>") {
-        socket.send(JSON.stringify({ type: "cli", data: this.HELP_MESSAGE }));
-        return;
-      }
-      const data = await this.callEndpoint(response);
-      socket.send(JSON.stringify({ type: "cli", data: data }));
     } catch (error) {
       console.error("AI.run ERROR:", error);
       socket.send(
@@ -132,14 +134,17 @@ usage: [cmd] [product] [options]\n`;
         }
       );
 
-      const responseData = (await response.json()) as {
+      const { success, errors, messages, result } = (await response.json()) as {
+        success: boolean;
         result?: unknown;
-        error?: unknown;
+        errors?: unknown;
+        messages?: unknown;
       };
-      if (!responseData.result && responseData.error) {
-        return responseData.error;
+      if (!success) {
+        console.log('Failed calling endpoint. Tried to call', endpoint); 
+        return { errors, messages };
       }
-      return responseData.result;
+      return result;
     } catch (error) {
       console.error("API error:", error);
       return `Error: ${
@@ -174,9 +179,12 @@ export default {
         }
       );
       const data: any = await response.json();
-      if ("error" in data) console.log(data.error);
+      if ("error" in data) console.log("[AUTH ERROR]", data.error);
       const cfUserId = data?.result?.id;
-      if (!cfUserId) return new Response("ur creds dont work", { status: 403 });
+      if (!cfUserId) {
+        console.log("[ERROR] No user ID found from CF");
+        return new Response("ur creds dont work", { status: 403 });
+      }
 
       let newReq = new Request(request.url, {
         method: "GET",
