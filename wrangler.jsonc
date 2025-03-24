@@ -26,6 +26,9 @@
       }
     ]
   },
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "endpoint-embeddings" }
+  ],
   "observability": {
     "enabled": true
   },

@@ -1,18 +1,13 @@
 export const HELP_MESSAGE = `CLU helps you nagivate the complexity of the Cloudflare API.
-Use it as you would use a native CLI client, try whatever feels intuitive. It's pretty smart.
+It pattern matches your command to a CF endpoint and makes the call for you.
+Built with Workers, Durable Objects, Vectorize and Workers AI.
 
-Usage: [scope] [command] <options>
+Usage: [command] <options>
 
-Scopes:
-\taccounts - Account level endpoints.
-\t\t(example: account ls vectorize indexes --accountId 1234)
+Examples:
+\tTarget endpoint: /accounts/1234/vectorize/indexes
+\t\tCommand: ls vectorize indexes --accountId 1234
 
-\tzones - Zone level endpoints
-\t\t(example: zones ls rulesets --zoneId 1234)
-
-\tradar - Radar level endpoints.
-\t\t(example: idk i don't use radar)
-
-\tmisc (default) - All other endpoints.
-\t\t(example: get user)
+\tTarget endpoint: /zones/1234/rulesets/phases/http_request_firewall_custom/entrypoint
+\t\tCommand: get ruleset --zone 1234 --phase http_request_firewall_custom
 \n`;
