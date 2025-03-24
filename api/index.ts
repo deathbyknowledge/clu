@@ -9,6 +9,7 @@ import cfAccounts from "./prompts/cf-accounts";
 import cfZones from "./prompts/cf-zones";
 import cfRadar from "./prompts/cf-radar";
 import cfMisc from "./prompts/cf-misc";
+import { HELP_MESSAGE } from "./constants";
 
 type State = {
   history: string[];
@@ -23,26 +24,18 @@ interface AiTextGenerationResult {
   response: string;
 }
 
-const HELP_MESSAGE = `CLU helps you nagivate the complexity of the Cloudflare API.
-Use it as you would use a native CLI client, try whatever feels intuitive. It's pretty smart.
-
-Usage: [scope] [command] <options>
-
-Scopes:
-\taccounts - Account level endpoints.
-\t\t(example: account ls vectorize indexes --accountId 1234)
-
-\tzones - Zone level endpoints
-\t\t(example: zones ls rulesets --zoneId 1234)
-
-\tradar - Radar level endpoints.
-\t\t(example: idk i don't use radar)
-
-\tmisc (default) - All other endpoints.
-\t\t(example: get user)
-\n`;
-
 export class Clu extends Agent<Env, State> {
+
+  onStart() {
+    this.setState({
+      ...this.state,
+      env: new Map(),
+      HELP_MESSAGE,
+      history: [],
+      status: "ready",
+    });
+  }
+
   onConnect(
     connection: Connection,
     ctx: ConnectionContext
@@ -55,7 +48,6 @@ export class Clu extends Agent<Env, State> {
     }
     this.setState({
       ...this.state,
-      HELP_MESSAGE,
       API_TOKEN: token,
       history: this.state.history ?? [],
       status: "ready",
