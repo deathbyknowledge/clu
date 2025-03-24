@@ -153,7 +153,7 @@ const Terminal: React.FC = () => {
     event: React.KeyboardEvent<HTMLInputElement>
   ) => {
     if (event.key === "ArrowUp") {
-      if (agentState && agentState.history.length > historyIdx){
+      if (agentState && agentState.history?.length > historyIdx){
         setInput(agentState.history.reverse()[historyIdx]);
         setHistoryIdx(historyIdx + 1);
       }
