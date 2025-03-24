@@ -49,7 +49,6 @@ export class Clu extends Agent<Env, State> {
     this.setState({
       ...this.state,
       API_TOKEN: token,
-      history: this.state.history ?? [],
       status: "ready",
     });
   }
