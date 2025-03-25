@@ -6,7 +6,9 @@ import {
   WSMessage,
 } from "agents";
 import cliPrompt from "./prompts/cli";
+import grabPrompt from "./prompts/grab";
 import { HELP_MESSAGE } from "./constants";
+import jmespath from "jmespath";
 
 type State = {
   history: string[];
@@ -104,12 +106,45 @@ export class Clu extends Agent<Env, State> {
     return endpointsRAG;
   }
 
+  async useGrab(query: string, json: any) {
+    const result = await this.env.AI.run(
+      "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      {
+        messages: [
+          { role: "system", content: grabPrompt },
+          {
+            role: "user",
+            content: `<query>${query}</query>\n<json>${JSON.stringify(
+              json
+            )}</json>`,
+          },
+        ],
+      },
+      {
+        gateway: {
+          id: "clu-gateway",
+          skipCache: false,
+          cacheTtl: 3360,
+        },
+      }
+    );
+
+    console.log('grabbed:', result);
+    if ("response" in result) return jmespath.search(json, result.response!);
+    else return json;
+  }
+
   async processCmd(socket: WebSocket, cmd: string) {
     try {
       let newHistory = [...this.state.history];
       const overflows = newHistory.push(cmd) > 50;
       if (overflows) newHistory.shift();
       this.setState({ ...this.state, history: newHistory, status: "thinking" });
+      const needsGrab = cmd.includes("| grab");
+      let query;
+      if (needsGrab) {
+        [cmd, query] = cmd.split('| grab');
+      }
 
       // RAG
       const endpointsRAG = await this.findSimilarEndpoints(cmd);
@@ -141,7 +176,12 @@ export class Clu extends Agent<Env, State> {
           return;
         }
         this.setState({ ...this.state, status: "fetching" });
-        const data = await this.callEndpoint(response);
+        let data = await this.callEndpoint(response);
+
+        if (needsGrab) {
+          data = await this.useGrab(query!, data);
+        }
+
         socket.send(JSON.stringify({ type: "cli", data: data }));
       } else {
         socket.send(
