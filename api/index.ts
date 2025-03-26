@@ -114,9 +114,7 @@ export class Clu extends Agent<Env, State> {
           { role: "system", content: grabPrompt },
           {
             role: "user",
-            content: `<query>${query}</query>\n<json>${JSON.stringify(
-              json
-            )}</json>`,
+            content: query,
           },
         ],
       },
@@ -129,7 +127,7 @@ export class Clu extends Agent<Env, State> {
       }
     );
 
-    console.log('grabbed:', result);
+    console.log("grabbed:", result);
     if ("response" in result) return jmespath.search(json, result.response!);
     else return json;
   }
@@ -140,10 +138,10 @@ export class Clu extends Agent<Env, State> {
       const overflows = newHistory.push(cmd) > 50;
       if (overflows) newHistory.shift();
       this.setState({ ...this.state, history: newHistory, status: "thinking" });
-      const needsGrab = cmd.includes("| grab");
+      const needsGrab = cmd.includes(" | grab");
       let query;
       if (needsGrab) {
-        [cmd, query] = cmd.split('| grab');
+        [cmd, query] = cmd.split(" | grab ");
       }
 
       // RAG
